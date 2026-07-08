@@ -1,4 +1,4 @@
-package br.com.cortex.sign.dto;
+package br.com.cortex.sign.modules.organizacao.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

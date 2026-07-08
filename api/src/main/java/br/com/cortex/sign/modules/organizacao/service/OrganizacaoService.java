@@ -1,61 +1,55 @@
-package br.com.cortex.sign.service;
+package br.com.cortex.sign.modules.organizacao.service;
 
+import br.com.cortex.sign.common.exception.RecursoNaoEncontradoException;
+import br.com.cortex.sign.modules.organizacao.dto.request.AtualizarOrganizacaoRequest;
+import br.com.cortex.sign.modules.organizacao.dto.request.CriarOrganizacaoRequest;
+import br.com.cortex.sign.modules.organizacao.dto.response.OrganizacaoResponse;
+import br.com.cortex.sign.modules.organizacao.entity.Organizacao;
+import br.com.cortex.sign.modules.organizacao.mapper.OrganizacaoMapper;
+import br.com.cortex.sign.modules.organizacao.repository.OrganizacaoRepository;
 import java.util.List;
 import java.util.UUID;
-
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import br.com.cortex.sign.dto.AtualizarOrganizacaoRequest;
-import br.com.cortex.sign.dto.CriarOrganizacaoRequest;
-import br.com.cortex.sign.dto.OrganizacaoResponse;
-import br.com.cortex.sign.entity.Organizacao;
-import br.com.cortex.sign.exception.RecursoNaoEncontradoException;
-import br.com.cortex.sign.repository.OrganizacaoRepository;
-import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
 public class OrganizacaoService {
 
     private final OrganizacaoRepository organizacaoRepository;
+    private final OrganizacaoMapper organizacaoMapper;
 
     @Transactional
     public OrganizacaoResponse criar(CriarOrganizacaoRequest request) {
-        Organizacao organizacao = new Organizacao();
-        organizacao.setNome(request.nome());
-        organizacao.setNumeroDocumento(request.numeroDocumento());
-
+        Organizacao organizacao = organizacaoMapper.toEntity(request);
         Organizacao organizacaoSalva = organizacaoRepository.saveAndFlush(organizacao);
 
-        return toResponse(organizacaoSalva);
+        return organizacaoMapper.toResponse(organizacaoSalva);
     }
 
     @Transactional(readOnly = true)
     public List<OrganizacaoResponse> listar() {
         return organizacaoRepository.findAll()
                 .stream()
-                .map(this::toResponse)
+                .map(organizacaoMapper::toResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public OrganizacaoResponse buscarPorId(UUID id) {
-        Organizacao organizacao = buscarEntidadePorId(id);
-
-        return toResponse(organizacao);
+        return organizacaoMapper.toResponse(buscarEntidadePorId(id));
     }
 
     @Transactional
     public OrganizacaoResponse atualizar(UUID id, AtualizarOrganizacaoRequest request) {
         Organizacao organizacao = buscarEntidadePorId(id);
 
-        organizacao.setNome(request.nome());
-        organizacao.setNumeroDocumento(request.numeroDocumento());
+        organizacaoMapper.updateEntity(organizacao, request);
 
         Organizacao organizacaoAtualizada = organizacaoRepository.saveAndFlush(organizacao);
 
-        return toResponse(organizacaoAtualizada);
+        return organizacaoMapper.toResponse(organizacaoAtualizada);
     }
 
     @Transactional
@@ -65,18 +59,8 @@ public class OrganizacaoService {
         organizacaoRepository.delete(organizacao);
     }
 
-    private Organizacao buscarEntidadePorId(UUID id) {
+    public Organizacao buscarEntidadePorId(UUID id) {
         return organizacaoRepository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Organização não encontrada"));
-    }
-
-    private OrganizacaoResponse toResponse(Organizacao organizacao) {
-        return new OrganizacaoResponse(
-                organizacao.getId(),
-                organizacao.getNome(),
-                organizacao.getNumeroDocumento(),
-                organizacao.getCriadoEm(),
-                organizacao.getAtualizadoEm()
-        );
     }
 }
