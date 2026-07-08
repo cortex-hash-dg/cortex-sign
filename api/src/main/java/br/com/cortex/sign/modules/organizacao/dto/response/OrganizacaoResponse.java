@@ -1,4 +1,4 @@
-package br.com.cortex.sign.dto;
+package br.com.cortex.sign.modules.organizacao.dto.response;
 
 import java.time.LocalDateTime;
 import java.util.UUID;

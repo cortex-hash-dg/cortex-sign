@@ -1,4 +1,4 @@
-package br.com.cortex.sign.exception;
+package br.com.cortex.sign.common.exception;
 
 public class RecursoNaoEncontradoException extends RuntimeException {
 
