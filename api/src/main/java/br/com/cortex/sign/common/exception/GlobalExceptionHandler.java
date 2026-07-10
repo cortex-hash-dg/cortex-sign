@@ -41,6 +41,21 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(CredenciaisInvalidasException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ErroResponse handleCredenciaisInvalidas(
+            CredenciaisInvalidasException exception,
+            HttpServletRequest request
+    ) {
+        return new ErroResponse(
+                LocalDateTime.now(),
+                HttpStatus.UNAUTHORIZED.value(),
+                HttpStatus.UNAUTHORIZED.getReasonPhrase(),
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErroResponse handleValidacao(

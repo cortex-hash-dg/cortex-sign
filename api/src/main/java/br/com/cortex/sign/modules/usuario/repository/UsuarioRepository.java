@@ -1,12 +1,15 @@
 package br.com.cortex.sign.modules.usuario.repository;
 
 import br.com.cortex.sign.modules.usuario.entity.Usuario;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
 
-    boolean existsByEmail(String email);
+    Optional<Usuario> findByEmailIgnoreCase(String email);
 
-    boolean existsByEmailAndIdNot(String email, UUID id);
+    boolean existsByEmailIgnoreCase(String email);
+
+    boolean existsByEmailIgnoreCaseAndIdNot(String email, UUID id);
 }
