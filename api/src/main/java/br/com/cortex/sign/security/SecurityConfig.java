@@ -62,6 +62,13 @@ public class SecurityConfig {
                                 "SUPER_ADMINISTRADOR",
                                 "ADMINISTRADOR_ORGANIZACAO"
                         )
+                        .requestMatchers("/api/documentos/**").hasAnyRole(
+                                "SUPER_ADMINISTRADOR",
+                                "ADMINISTRADOR_ORGANIZACAO",
+                                "GESTOR",
+                                "OPERADOR",
+                                "AUDITOR"
+                        )
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)

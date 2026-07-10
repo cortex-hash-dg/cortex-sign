@@ -25,3 +25,7 @@ replay_pid*
 
 # Local environment variables
 .env
+
+# Local uploaded files
+api/storage/
+storage/

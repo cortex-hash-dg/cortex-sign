@@ -56,6 +56,37 @@ public class GlobalExceptionHandler {
         );
     }
 
+
+    @ExceptionHandler(AcessoNegadoException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ErroResponse handleAcessoNegado(
+            AcessoNegadoException exception,
+            HttpServletRequest request
+    ) {
+        return new ErroResponse(
+                LocalDateTime.now(),
+                HttpStatus.FORBIDDEN.value(),
+                HttpStatus.FORBIDDEN.getReasonPhrase(),
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+    }
+
+    @ExceptionHandler(ArmazenamentoException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public ErroResponse handleArmazenamento(
+            ArmazenamentoException exception,
+            HttpServletRequest request
+    ) {
+        return new ErroResponse(
+                LocalDateTime.now(),
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErroResponse handleValidacao(
