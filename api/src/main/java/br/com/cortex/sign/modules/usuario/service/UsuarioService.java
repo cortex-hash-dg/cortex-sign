@@ -12,6 +12,7 @@ import br.com.cortex.sign.modules.usuario.enums.PerfilUsuario;
 import br.com.cortex.sign.modules.usuario.mapper.UsuarioMapper;
 import br.com.cortex.sign.modules.usuario.repository.UsuarioRepository;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -30,11 +31,13 @@ public class UsuarioService {
     @Transactional
     public UsuarioResponse criar(CriarUsuarioRequest request) {
         validarOrganizacaoObrigatoria(request.perfil(), request.organizacaoId());
-        validarEmailDisponivel(request.email());
+        String emailNormalizado = normalizarEmail(request.email());
+        validarEmailDisponivel(emailNormalizado);
 
         Organizacao organizacao = buscarOrganizacaoOpcional(request.organizacaoId());
         String senhaHash = passwordEncoder.encode(request.senha());
         Usuario usuario = usuarioMapper.toEntity(request, organizacao, senhaHash);
+        usuario.setEmail(emailNormalizado);
 
         Usuario usuarioSalvo = usuarioRepository.saveAndFlush(usuario);
 
@@ -60,12 +63,14 @@ public class UsuarioService {
 
         Usuario usuario = buscarEntidadePorId(id);
 
-        if (usuarioRepository.existsByEmailAndIdNot(request.email(), id)) {
+        String emailNormalizado = normalizarEmail(request.email());
+        if (usuarioRepository.existsByEmailIgnoreCaseAndIdNot(emailNormalizado, id)) {
             throw new ConflitoException("Já existe um usuário com este e-mail");
         }
 
         Organizacao organizacao = buscarOrganizacaoOpcional(request.organizacaoId());
         usuarioMapper.updateEntity(usuario, request, organizacao);
+        usuario.setEmail(emailNormalizado);
 
         Usuario usuarioAtualizado = usuarioRepository.saveAndFlush(usuario);
 
@@ -99,8 +104,12 @@ public class UsuarioService {
     }
 
     private void validarEmailDisponivel(String email) {
-        if (usuarioRepository.existsByEmail(email)) {
+        if (usuarioRepository.existsByEmailIgnoreCase(email)) {
             throw new ConflitoException("Já existe um usuário com este e-mail");
         }
+    }
+
+    private String normalizarEmail(String email) {
+        return email.trim().toLowerCase(Locale.ROOT);
     }
 }
