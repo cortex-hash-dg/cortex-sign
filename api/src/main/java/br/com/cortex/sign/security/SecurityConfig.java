@@ -53,6 +53,7 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/refresh", "/api/auth/logout").permitAll()
+                        .requestMatchers("/api/publico/assinaturas/**").permitAll()
                         .requestMatchers("/api/auth/**").authenticated()
                         .requestMatchers("/api/organizacoes/**").hasAnyRole(
                                 "SUPER_ADMINISTRADOR",
@@ -62,11 +63,78 @@ public class SecurityConfig {
                                 "SUPER_ADMINISTRADOR",
                                 "ADMINISTRADOR_ORGANIZACAO"
                         )
-                        .requestMatchers("/api/documentos/**").hasAnyRole(
+                        .requestMatchers(HttpMethod.POST, "/api/documentos/*/signatarios").hasAnyRole(
+                                "SUPER_ADMINISTRADOR",
+                                "ADMINISTRADOR_ORGANIZACAO",
+                                "GESTOR",
+                                "OPERADOR"
+                        )
+                        .requestMatchers(HttpMethod.GET, "/api/documentos/*/signatarios").hasAnyRole(
                                 "SUPER_ADMINISTRADOR",
                                 "ADMINISTRADOR_ORGANIZACAO",
                                 "GESTOR",
                                 "OPERADOR",
+                                "AUDITOR"
+                        )
+                        .requestMatchers(HttpMethod.POST, "/api/documentos/*/solicitacoes-assinatura").hasAnyRole(
+                                "SUPER_ADMINISTRADOR",
+                                "ADMINISTRADOR_ORGANIZACAO",
+                                "GESTOR",
+                                "OPERADOR"
+                        )
+                        .requestMatchers(HttpMethod.GET, "/api/documentos/*/solicitacoes-assinatura").hasAnyRole(
+                                "SUPER_ADMINISTRADOR",
+                                "ADMINISTRADOR_ORGANIZACAO",
+                                "GESTOR",
+                                "OPERADOR",
+                                "AUDITOR"
+                        )
+                        .requestMatchers(HttpMethod.GET, "/api/documentos/**").hasAnyRole(
+                                "SUPER_ADMINISTRADOR",
+                                "ADMINISTRADOR_ORGANIZACAO",
+                                "GESTOR",
+                                "OPERADOR",
+                                "AUDITOR"
+                        )
+                        .requestMatchers(HttpMethod.POST, "/api/documentos/**").hasAnyRole(
+                                "SUPER_ADMINISTRADOR",
+                                "ADMINISTRADOR_ORGANIZACAO",
+                                "GESTOR",
+                                "OPERADOR"
+                        )
+                        .requestMatchers(HttpMethod.PUT, "/api/documentos/**").hasAnyRole(
+                                "SUPER_ADMINISTRADOR",
+                                "ADMINISTRADOR_ORGANIZACAO",
+                                "GESTOR",
+                                "OPERADOR"
+                        )
+                        .requestMatchers(HttpMethod.DELETE, "/api/documentos/**").hasAnyRole(
+                                "SUPER_ADMINISTRADOR",
+                                "ADMINISTRADOR_ORGANIZACAO",
+                                "GESTOR"
+                        )
+                        .requestMatchers(HttpMethod.GET, "/api/signatarios/**").hasAnyRole(
+                                "SUPER_ADMINISTRADOR",
+                                "ADMINISTRADOR_ORGANIZACAO",
+                                "GESTOR",
+                                "OPERADOR",
+                                "AUDITOR"
+                        )
+                        .requestMatchers("/api/signatarios/**").hasAnyRole(
+                                "SUPER_ADMINISTRADOR",
+                                "ADMINISTRADOR_ORGANIZACAO",
+                                "GESTOR",
+                                "OPERADOR"
+                        )
+                        .requestMatchers("/api/solicitacoes-assinatura/**").hasAnyRole(
+                                "SUPER_ADMINISTRADOR",
+                                "ADMINISTRADOR_ORGANIZACAO",
+                                "GESTOR",
+                                "OPERADOR"
+                        )
+                        .requestMatchers("/api/auditorias/**").hasAnyRole(
+                                "SUPER_ADMINISTRADOR",
+                                "ADMINISTRADOR_ORGANIZACAO",
                                 "AUDITOR"
                         )
                         .anyRequest().authenticated()

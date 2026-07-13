@@ -5,5 +5,6 @@ public enum StatusDocumento {
     ENVIADO_PARA_ASSINATURA,
     ASSINADO,
     CANCELADO,
+    REJEITADO,
     ARQUIVADO
 }
