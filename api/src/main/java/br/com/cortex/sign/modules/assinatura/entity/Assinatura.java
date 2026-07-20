@@ -59,6 +59,15 @@ public class Assinatura {
     @Column(name = "motivo_rejeicao", length = 500)
     private String motivoRejeicao;
 
+    @Column(name = "documento_hash_sha256", length = 64)
+    private String documentoHashSha256;
+
+    @Column(name = "evidencia_hash_sha256", length = 64)
+    private String evidenciaHashSha256;
+
+    @Column(name = "termo_aceite", columnDefinition = "TEXT")
+    private String termoAceite;
+
     @Column(name = "ip_assinatura", length = 80)
     private String ipAssinatura;
 
