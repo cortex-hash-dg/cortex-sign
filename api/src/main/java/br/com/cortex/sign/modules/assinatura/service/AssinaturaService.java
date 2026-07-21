@@ -134,12 +134,22 @@ public class AssinaturaService {
         validarCodigo(solicitacao, request.codigo());
 
         TipoAssinatura tipo = resolverTipoAssinatura(request.tipo());
+        Documento documento = solicitacao.getDocumento();
+        String documentoHash = obterHashDocumento(documento);
         ResultadoAssinatura resultado = provedorAssinatura.assinar(new DadosAssinatura(
-                solicitacao.getDocumento().getId(),
+                documento.getId(),
+                documento.getTitulo(),
+                documentoHash,
+                documento.getArquivoAtual().getTamanhoBytes(),
+                documento.getOrganizacao().getId(),
+                documento.getOrganizacao().getNome(),
                 solicitacao.getId(),
+                solicitacao.getCriadoEm(),
+                solicitacao.getExpiraEm(),
                 solicitacao.getSignatario().getId(),
                 solicitacao.getSignatario().getNome(),
                 solicitacao.getSignatario().getEmail(),
+                solicitacao.getCodigoHash(),
                 obterIp(servletRequest),
                 obterUserAgent(servletRequest)
         ));
@@ -151,6 +161,9 @@ public class AssinaturaService {
         assinatura.setProvedor(resultado.provedor());
         assinatura.setProtocolo(resultado.protocolo());
         assinatura.setAssinadoEm(resultado.assinadoEm());
+        assinatura.setDocumentoHashSha256(documentoHash);
+        assinatura.setEvidenciaHashSha256(resultado.evidenciaHashSha256());
+        assinatura.setTermoAceite(resultado.termoAceite());
         assinatura.setIpAssinatura(obterIp(servletRequest));
         assinatura.setUserAgent(limitar(obterUserAgent(servletRequest), 500));
         assinatura.setMetadados(resultado.metadados());
@@ -178,6 +191,7 @@ public class AssinaturaService {
         assinatura.setProvedor(provedorAssinatura.getProviderType());
         assinatura.setRejeitadoEm(LocalDateTime.now());
         assinatura.setMotivoRejeicao(request.motivo().trim());
+        assinatura.setDocumentoHashSha256(obterHashDocumento(solicitacao.getDocumento()));
         assinatura.setIpAssinatura(obterIp(servletRequest));
         assinatura.setUserAgent(limitar(obterUserAgent(servletRequest), 500));
         assinatura.setMetadados("Assinatura rejeitada pelo signatário");
@@ -193,6 +207,15 @@ public class AssinaturaService {
         return assinaturaMapper.toResponse(solicitacao, assinaturaSalva, null);
     }
 
+
+
+    private String obterHashDocumento(Documento documento) {
+        if (documento.getArquivoAtual() == null || documento.getArquivoAtual().getChecksumSha256() == null) {
+            throw new ConflitoException("Documento sem hash SHA-256 registrado. Faça novo upload antes de assinar");
+        }
+
+        return documento.getArquivoAtual().getChecksumSha256();
+    }
 
     private TipoAssinatura resolverTipoAssinatura(TipoAssinatura tipoInformado) {
         if (tipoInformado == null) {

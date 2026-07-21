@@ -7,6 +7,8 @@ public record ResultadoAssinatura(
         TipoProvedorAssinatura provedor,
         String protocolo,
         LocalDateTime assinadoEm,
-        String metadados
+        String metadados,
+        String evidenciaHashSha256,
+        String termoAceite
 ) {
 }

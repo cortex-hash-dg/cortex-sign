@@ -10,7 +10,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 @Service
-@ConditionalOnProperty(name = "app.assinatura.provider", havingValue = "MOCK", matchIfMissing = true)
+@ConditionalOnProperty(name = "app.assinatura.provider", havingValue = "MOCK")
 public class MockProvedorAssinatura implements ProvedorAssinatura {
 
     @Override
@@ -25,7 +25,9 @@ public class MockProvedorAssinatura implements ProvedorAssinatura {
                 getProviderType(),
                 protocolo,
                 LocalDateTime.now(),
-                metadados
+                metadados,
+                null,
+                null
         );
     }
 

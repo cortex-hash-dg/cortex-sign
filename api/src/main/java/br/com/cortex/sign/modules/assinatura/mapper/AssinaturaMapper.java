@@ -44,6 +44,9 @@ public class AssinaturaMapper {
                 assinatura.getAssinadoEm(),
                 assinatura.getRejeitadoEm(),
                 assinatura.getMotivoRejeicao(),
+                assinatura.getDocumentoHashSha256(),
+                assinatura.getEvidenciaHashSha256(),
+                assinatura.getTermoAceite(),
                 assinatura.getMetadados(),
                 assinatura.getCriadoEm()
         );

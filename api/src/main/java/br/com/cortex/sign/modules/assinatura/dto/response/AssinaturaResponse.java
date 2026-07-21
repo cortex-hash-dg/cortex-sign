@@ -16,6 +16,9 @@ public record AssinaturaResponse(
         LocalDateTime assinadoEm,
         LocalDateTime rejeitadoEm,
         String motivoRejeicao,
+        String documentoHashSha256,
+        String evidenciaHashSha256,
+        String termoAceite,
         String metadados,
         LocalDateTime criadoEm
 ) {
