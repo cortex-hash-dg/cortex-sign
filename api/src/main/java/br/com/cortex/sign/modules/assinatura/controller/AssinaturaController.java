@@ -3,7 +3,12 @@ package br.com.cortex.sign.modules.assinatura.controller;
 import br.com.cortex.sign.modules.assinatura.dto.request.AssinarComTokenRequest;
 import br.com.cortex.sign.modules.assinatura.dto.request.CriarSolicitacaoAssinaturaRequest;
 import br.com.cortex.sign.modules.assinatura.dto.request.RejeitarAssinaturaRequest;
+import br.com.cortex.sign.modules.assinatura.dto.request.SolicitarAcessoSignatarioExternoRequest;
+import br.com.cortex.sign.modules.assinatura.dto.request.SolicitarCodigoAssinaturaRequest;
+import br.com.cortex.sign.modules.assinatura.dto.request.ValidarAcessoSignatarioExternoRequest;
+import br.com.cortex.sign.modules.assinatura.dto.response.AcessoSignatarioExternoResponse;
 import br.com.cortex.sign.modules.assinatura.dto.response.AssinaturaPublicaResponse;
+import br.com.cortex.sign.modules.assinatura.dto.response.CodigoAssinaturaSolicitadoResponse;
 import br.com.cortex.sign.modules.assinatura.dto.response.SolicitacaoAssinaturaResponse;
 import br.com.cortex.sign.modules.assinatura.service.AssinaturaService;
 import br.com.cortex.sign.modules.auth.jwt.UsuarioAutenticado;
@@ -58,6 +63,30 @@ public class AssinaturaController {
     @GetMapping("/api/publico/assinaturas/{token}")
     public AssinaturaPublicaResponse buscarPublica(@PathVariable String token) {
         return assinaturaService.buscarPublica(token);
+    }
+
+    @PostMapping("/api/publico/assinaturas/{token}/codigo")
+    public CodigoAssinaturaSolicitadoResponse solicitarCodigo(
+            @PathVariable String token,
+            @Valid @RequestBody SolicitarCodigoAssinaturaRequest request
+    ) {
+        return assinaturaService.solicitarCodigo(token, request);
+    }
+
+    @PostMapping("/api/publico/assinaturas/{token}/acesso/solicitar")
+    public CodigoAssinaturaSolicitadoResponse solicitarAcessoExterno(
+            @PathVariable String token,
+            @Valid @RequestBody SolicitarAcessoSignatarioExternoRequest request
+    ) {
+        return assinaturaService.solicitarAcessoExterno(token, request);
+    }
+
+    @PostMapping("/api/publico/assinaturas/{token}/acesso/validar")
+    public AcessoSignatarioExternoResponse validarAcessoExterno(
+            @PathVariable String token,
+            @Valid @RequestBody ValidarAcessoSignatarioExternoRequest request
+    ) {
+        return assinaturaService.validarAcessoExterno(token, request);
     }
 
     @PostMapping("/api/publico/assinaturas/{token}/assinar")

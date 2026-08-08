@@ -9,6 +9,8 @@ public record CriarSolicitacaoAssinaturaRequest(
         UUID signatarioId,
 
         @Min(value = 1, message = "A validade deve ser de pelo menos 1 dia")
-        Integer validadeDias
+        Integer validadeDias,
+
+        Boolean semValidade
 ) {
 }

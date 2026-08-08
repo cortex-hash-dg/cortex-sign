@@ -1,5 +1,6 @@
 package br.com.cortex.sign.modules.organizacao.controller;
 
+import br.com.cortex.sign.modules.auth.jwt.UsuarioAutenticado;
 import br.com.cortex.sign.modules.organizacao.dto.request.AtualizarOrganizacaoRequest;
 import br.com.cortex.sign.modules.organizacao.dto.request.CriarOrganizacaoRequest;
 import br.com.cortex.sign.modules.organizacao.dto.response.OrganizacaoResponse;
@@ -9,6 +10,7 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,31 +30,41 @@ public class OrganizacaoController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public OrganizacaoResponse criar(@Valid @RequestBody CriarOrganizacaoRequest request) {
-        return organizacaoService.criar(request);
+    public OrganizacaoResponse criar(
+            @AuthenticationPrincipal UsuarioAutenticado usuarioAutenticado,
+            @Valid @RequestBody CriarOrganizacaoRequest request
+    ) {
+        return organizacaoService.criar(usuarioAutenticado, request);
     }
 
     @GetMapping
-    public List<OrganizacaoResponse> listar() {
-        return organizacaoService.listar();
+    public List<OrganizacaoResponse> listar(@AuthenticationPrincipal UsuarioAutenticado usuarioAutenticado) {
+        return organizacaoService.listar(usuarioAutenticado);
     }
 
     @GetMapping("/{id}")
-    public OrganizacaoResponse buscarPorId(@PathVariable UUID id) {
-        return organizacaoService.buscarPorId(id);
+    public OrganizacaoResponse buscarPorId(
+            @AuthenticationPrincipal UsuarioAutenticado usuarioAutenticado,
+            @PathVariable UUID id
+    ) {
+        return organizacaoService.buscarPorId(usuarioAutenticado, id);
     }
 
     @PutMapping("/{id}")
     public OrganizacaoResponse atualizar(
+            @AuthenticationPrincipal UsuarioAutenticado usuarioAutenticado,
             @PathVariable UUID id,
             @Valid @RequestBody AtualizarOrganizacaoRequest request
     ) {
-        return organizacaoService.atualizar(id, request);
+        return organizacaoService.atualizar(usuarioAutenticado, id, request);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void excluir(@PathVariable UUID id) {
-        organizacaoService.excluir(id);
+    public void excluir(
+            @AuthenticationPrincipal UsuarioAutenticado usuarioAutenticado,
+            @PathVariable UUID id
+    ) {
+        organizacaoService.excluir(usuarioAutenticado, id);
     }
 }

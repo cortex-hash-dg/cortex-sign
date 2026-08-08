@@ -20,6 +20,9 @@ public record AtualizarSignatarioRequest(
         @Size(max = 30, message = "O documento do signatário deve ter no máximo 30 caracteres")
         String numeroDocumento,
 
+        @Size(max = 30, message = "O telefone do signatário deve ter no máximo 30 caracteres")
+        String telefone,
+
         @NotNull(message = "O tipo do signatário é obrigatório")
         TipoSignatario tipo,
 

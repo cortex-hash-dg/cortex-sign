@@ -11,6 +11,7 @@ public record SignatarioResponse(
         String nome,
         String email,
         String numeroDocumento,
+        String telefone,
         TipoSignatario tipo,
         Integer ordemAssinatura,
         LocalDateTime criadoEm,

@@ -44,6 +44,9 @@ public class Signatario {
     @Column(name = "numero_documento", length = 30)
     private String numeroDocumento;
 
+    @Column(length = 30)
+    private String telefone;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 40)
     private TipoSignatario tipo;

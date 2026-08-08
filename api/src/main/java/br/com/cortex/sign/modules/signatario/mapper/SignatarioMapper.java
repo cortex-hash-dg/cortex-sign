@@ -16,6 +16,7 @@ public class SignatarioMapper {
         signatario.setNome(request.nome().trim());
         signatario.setEmail(request.email().trim().toLowerCase());
         signatario.setNumeroDocumento(normalizarOpcional(request.numeroDocumento()));
+        signatario.setTelefone(normalizarOpcional(request.telefone()));
         signatario.setTipo(request.tipo());
         signatario.setOrdemAssinatura(request.ordemAssinatura() != null ? request.ordemAssinatura() : 1);
         return signatario;
@@ -25,6 +26,7 @@ public class SignatarioMapper {
         signatario.setNome(request.nome().trim());
         signatario.setEmail(request.email().trim().toLowerCase());
         signatario.setNumeroDocumento(normalizarOpcional(request.numeroDocumento()));
+        signatario.setTelefone(normalizarOpcional(request.telefone()));
         signatario.setTipo(request.tipo());
         signatario.setOrdemAssinatura(request.ordemAssinatura() != null ? request.ordemAssinatura() : 1);
     }
@@ -39,6 +41,7 @@ public class SignatarioMapper {
                 signatario.getNome(),
                 signatario.getEmail(),
                 signatario.getNumeroDocumento(),
+                signatario.getTelefone(),
                 signatario.getTipo(),
                 signatario.getOrdemAssinatura(),
                 signatario.getCriadoEm(),

@@ -53,8 +53,13 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/refresh", "/api/auth/logout").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/email/confirmacao/validar").permitAll()
                         .requestMatchers("/api/publico/assinaturas/**").permitAll()
+                        .requestMatchers("/api/webhooks/whatsapp").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/certificados/verificar/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/certificados/verificar/documento").permitAll()
                         .requestMatchers("/api/auth/**").authenticated()
+                        .requestMatchers("/api/organizacoes/*/membros/**").authenticated()
                         .requestMatchers("/api/organizacoes/**").hasAnyRole(
                                 "SUPER_ADMINISTRADOR",
                                 "ADMINISTRADOR_ORGANIZACAO"
