@@ -50,7 +50,7 @@ public class SolicitacaoAssinatura {
     @Column(name = "codigo_hash", nullable = false, length = 128)
     private String codigoHash;
 
-    @Column(name = "expira_em", nullable = false)
+    @Column(name = "expira_em")
     private LocalDateTime expiraEm;
 
     @CreationTimestamp

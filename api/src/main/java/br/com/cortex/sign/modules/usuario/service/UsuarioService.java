@@ -1,8 +1,12 @@
 package br.com.cortex.sign.modules.usuario.service;
 
+import br.com.cortex.sign.common.exception.AcessoNegadoException;
 import br.com.cortex.sign.common.exception.ConflitoException;
+import br.com.cortex.sign.common.exception.CredenciaisInvalidasException;
 import br.com.cortex.sign.common.exception.RecursoNaoEncontradoException;
+import br.com.cortex.sign.modules.auth.jwt.UsuarioAutenticado;
 import br.com.cortex.sign.modules.organizacao.entity.Organizacao;
+import br.com.cortex.sign.modules.organizacao.service.OrganizacaoMembroService;
 import br.com.cortex.sign.modules.organizacao.service.OrganizacaoService;
 import br.com.cortex.sign.modules.usuario.dto.request.AtualizarUsuarioRequest;
 import br.com.cortex.sign.modules.usuario.dto.request.CriarUsuarioRequest;
@@ -25,63 +29,86 @@ public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
     private final OrganizacaoService organizacaoService;
+    private final OrganizacaoMembroService organizacaoMembroService;
     private final UsuarioMapper usuarioMapper;
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
-    public UsuarioResponse criar(CriarUsuarioRequest request) {
-        validarOrganizacaoObrigatoria(request.perfil(), request.organizacaoId());
+    public UsuarioResponse criar(UsuarioAutenticado usuarioAutenticado, CriarUsuarioRequest request) {
+        Usuario usuarioLogado = buscarUsuarioAutenticado(usuarioAutenticado);
+        validarPerfilPermitidoParaCriacao(usuarioLogado, request.perfil());
+
         String emailNormalizado = normalizarEmail(request.email());
         validarEmailDisponivel(emailNormalizado);
 
-        Organizacao organizacao = buscarOrganizacaoOpcional(request.organizacaoId());
+        Organizacao organizacao = resolverOrganizacaoParaEscrita(usuarioLogado, request.organizacaoId(), request.perfil());
         String senhaHash = passwordEncoder.encode(request.senha());
         Usuario usuario = usuarioMapper.toEntity(request, organizacao, senhaHash);
         usuario.setEmail(emailNormalizado);
 
         Usuario usuarioSalvo = usuarioRepository.saveAndFlush(usuario);
+        organizacaoMembroService.criarVinculoInicialSeNecessario(usuarioSalvo, organizacao, request.perfil());
 
         return usuarioMapper.toResponse(usuarioSalvo);
     }
 
     @Transactional(readOnly = true)
-    public List<UsuarioResponse> listar() {
-        return usuarioRepository.findAll()
+    public List<UsuarioResponse> listar(UsuarioAutenticado usuarioAutenticado) {
+        Usuario usuarioLogado = buscarUsuarioAutenticado(usuarioAutenticado);
+
+        List<Usuario> usuarios = isSuperAdmin(usuarioLogado)
+                ? usuarioRepository.findAllByAtivoTrueOrderByNomeAsc()
+                : usuarioRepository.findAllByOrganizacaoIdAndAtivoTrueOrderByNomeAsc(obterOrganizacaoIdObrigatoria(usuarioLogado));
+
+        return usuarios
                 .stream()
                 .map(usuarioMapper::toResponse)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public UsuarioResponse buscarPorId(UUID id) {
-        return usuarioMapper.toResponse(buscarEntidadePorId(id));
+    public UsuarioResponse buscarPorId(UsuarioAutenticado usuarioAutenticado, UUID id) {
+        Usuario usuarioLogado = buscarUsuarioAutenticado(usuarioAutenticado);
+        Usuario usuario = buscarEntidadePorId(id);
+        validarAcessoAoUsuario(usuarioLogado, usuario);
+
+        return usuarioMapper.toResponse(usuario);
     }
 
     @Transactional
-    public UsuarioResponse atualizar(UUID id, AtualizarUsuarioRequest request) {
-        validarOrganizacaoObrigatoria(request.perfil(), request.organizacaoId());
-
+    public UsuarioResponse atualizar(UsuarioAutenticado usuarioAutenticado, UUID id, AtualizarUsuarioRequest request) {
+        Usuario usuarioLogado = buscarUsuarioAutenticado(usuarioAutenticado);
         Usuario usuario = buscarEntidadePorId(id);
+        validarAcessoAoUsuario(usuarioLogado, usuario);
+        validarPerfilPermitidoParaCriacao(usuarioLogado, request.perfil());
 
         String emailNormalizado = normalizarEmail(request.email());
         if (usuarioRepository.existsByEmailIgnoreCaseAndIdNot(emailNormalizado, id)) {
             throw new ConflitoException("Já existe um usuário com este e-mail");
         }
 
-        Organizacao organizacao = buscarOrganizacaoOpcional(request.organizacaoId());
+        Organizacao organizacao = resolverOrganizacaoParaEscrita(usuarioLogado, request.organizacaoId(), request.perfil());
         usuarioMapper.updateEntity(usuario, request, organizacao);
         usuario.setEmail(emailNormalizado);
 
         Usuario usuarioAtualizado = usuarioRepository.saveAndFlush(usuario);
+        organizacaoMembroService.criarVinculoInicialSeNecessario(usuarioAtualizado, organizacao, request.perfil());
 
         return usuarioMapper.toResponse(usuarioAtualizado);
     }
 
     @Transactional
-    public void excluir(UUID id) {
+    public void excluir(UsuarioAutenticado usuarioAutenticado, UUID id) {
+        Usuario usuarioLogado = buscarUsuarioAutenticado(usuarioAutenticado);
         Usuario usuario = buscarEntidadePorId(id);
+        validarAcessoAoUsuario(usuarioLogado, usuario);
 
-        usuarioRepository.delete(usuario);
+        if (usuario.getId().equals(usuarioLogado.getId())) {
+            throw new ConflitoException("Você não pode excluir o próprio usuário");
+        }
+
+        usuario.setAtivo(false);
+        usuarioRepository.save(usuario);
     }
 
     private Usuario buscarEntidadePorId(UUID id) {
@@ -97,10 +124,77 @@ public class UsuarioService {
         return organizacaoService.buscarEntidadePorId(organizacaoId);
     }
 
-    private void validarOrganizacaoObrigatoria(PerfilUsuario perfil, UUID organizacaoId) {
-        if (perfil != PerfilUsuario.SUPER_ADMINISTRADOR && organizacaoId == null) {
+    private Organizacao resolverOrganizacaoParaEscrita(Usuario usuarioLogado, UUID organizacaoIdSolicitada, PerfilUsuario perfil) {
+        if (isSuperAdmin(usuarioLogado)) {
+            if (perfil != PerfilUsuario.SUPER_ADMINISTRADOR && organizacaoIdSolicitada == null) {
+                throw new ConflitoException("A organização é obrigatória para este perfil de usuário");
+            }
+
+            return buscarOrganizacaoOpcional(organizacaoIdSolicitada);
+        }
+
+        UUID organizacaoIdUsuarioLogado = obterOrganizacaoIdObrigatoria(usuarioLogado);
+        if (organizacaoIdSolicitada != null && !organizacaoIdSolicitada.equals(organizacaoIdUsuarioLogado)) {
+            throw new AcessoNegadoException("Você não pode gerenciar usuários de outra organização");
+        }
+
+        if (perfil == PerfilUsuario.SUPER_ADMINISTRADOR) {
+            throw new AcessoNegadoException("Administrador da organização não pode criar Super Admin");
+        }
+
+        return buscarOrganizacaoOpcional(organizacaoIdUsuarioLogado);
+    }
+
+    private void validarPerfilPermitidoParaCriacao(Usuario usuarioLogado, PerfilUsuario perfil) {
+        if (isSuperAdmin(usuarioLogado)) {
+            return;
+        }
+
+        if (usuarioLogado.getPerfil() != PerfilUsuario.ADMINISTRADOR_ORGANIZACAO) {
+            throw new AcessoNegadoException("Você não tem permissão para gerenciar usuários");
+        }
+
+        if (perfil == PerfilUsuario.SUPER_ADMINISTRADOR) {
+            throw new AcessoNegadoException("Administrador da organização não pode criar Super Admin");
+        }
+    }
+
+    private void validarAcessoAoUsuario(Usuario usuarioLogado, Usuario usuarioAlvo) {
+        if (isSuperAdmin(usuarioLogado)) {
+            return;
+        }
+
+        UUID organizacaoIdUsuarioLogado = obterOrganizacaoIdObrigatoria(usuarioLogado);
+        if (usuarioAlvo.getOrganizacao() == null || !usuarioAlvo.getOrganizacao().getId().equals(organizacaoIdUsuarioLogado)) {
+            throw new AcessoNegadoException("Você não tem permissão para acessar usuários de outra organização");
+        }
+    }
+
+    private Usuario buscarUsuarioAutenticado(UsuarioAutenticado usuarioAutenticado) {
+        if (usuarioAutenticado == null) {
+            throw new CredenciaisInvalidasException("Autenticação obrigatória");
+        }
+
+        Usuario usuario = usuarioRepository.findById(usuarioAutenticado.id())
+                .orElseThrow(() -> new CredenciaisInvalidasException("Usuário não encontrado"));
+
+        if (!Boolean.TRUE.equals(usuario.getAtivo())) {
+            throw new CredenciaisInvalidasException("Usuário inativo");
+        }
+
+        return usuario;
+    }
+
+    private boolean isSuperAdmin(Usuario usuario) {
+        return usuario.getPerfil() == PerfilUsuario.SUPER_ADMINISTRADOR;
+    }
+
+    private UUID obterOrganizacaoIdObrigatoria(Usuario usuario) {
+        if (usuario.getOrganizacao() == null) {
             throw new ConflitoException("A organização é obrigatória para este perfil de usuário");
         }
+
+        return usuario.getOrganizacao().getId();
     }
 
     private void validarEmailDisponivel(String email) {

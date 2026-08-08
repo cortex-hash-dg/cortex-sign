@@ -5,6 +5,5 @@ public enum PerfilUsuario {
     ADMINISTRADOR_ORGANIZACAO,
     GESTOR,
     OPERADOR,
-    SIGNATARIO,
     AUDITOR
 }

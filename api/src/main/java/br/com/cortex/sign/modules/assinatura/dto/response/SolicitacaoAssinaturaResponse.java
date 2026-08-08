@@ -13,7 +13,6 @@ public record SolicitacaoAssinaturaResponse(
         String signatarioEmail,
         StatusSolicitacaoAssinatura status,
         String token,
-        String codigoTeste,
         LocalDateTime expiraEm,
         AssinaturaResponse assinatura,
         LocalDateTime criadoEm,

@@ -27,5 +27,5 @@ replay_pid*
 .env
 
 # Local uploaded files
-api/storage/
-storage/
+/api/storage/
+/storage/

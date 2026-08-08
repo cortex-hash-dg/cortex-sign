@@ -11,6 +11,8 @@ public interface SolicitacaoAssinaturaRepository extends JpaRepository<Solicitac
 
     List<SolicitacaoAssinatura> findAllByDocumentoIdOrderByCriadoEmDesc(UUID documentoId);
 
+    List<SolicitacaoAssinatura> findAllByDocumentoIdOrderByCriadoEmAsc(UUID documentoId);
+
     Optional<SolicitacaoAssinatura> findByToken(String token);
 
     boolean existsBySignatarioIdAndStatus(UUID signatarioId, StatusSolicitacaoAssinatura status);

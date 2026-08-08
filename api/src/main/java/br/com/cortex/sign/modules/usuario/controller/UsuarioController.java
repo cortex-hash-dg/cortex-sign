@@ -1,5 +1,6 @@
 package br.com.cortex.sign.modules.usuario.controller;
 
+import br.com.cortex.sign.modules.auth.jwt.UsuarioAutenticado;
 import br.com.cortex.sign.modules.usuario.dto.request.AtualizarUsuarioRequest;
 import br.com.cortex.sign.modules.usuario.dto.request.CriarUsuarioRequest;
 import br.com.cortex.sign.modules.usuario.dto.response.UsuarioResponse;
@@ -9,6 +10,7 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,31 +30,41 @@ public class UsuarioController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public UsuarioResponse criar(@Valid @RequestBody CriarUsuarioRequest request) {
-        return usuarioService.criar(request);
+    public UsuarioResponse criar(
+            @AuthenticationPrincipal UsuarioAutenticado usuarioAutenticado,
+            @Valid @RequestBody CriarUsuarioRequest request
+    ) {
+        return usuarioService.criar(usuarioAutenticado, request);
     }
 
     @GetMapping
-    public List<UsuarioResponse> listar() {
-        return usuarioService.listar();
+    public List<UsuarioResponse> listar(@AuthenticationPrincipal UsuarioAutenticado usuarioAutenticado) {
+        return usuarioService.listar(usuarioAutenticado);
     }
 
     @GetMapping("/{id}")
-    public UsuarioResponse buscarPorId(@PathVariable UUID id) {
-        return usuarioService.buscarPorId(id);
+    public UsuarioResponse buscarPorId(
+            @AuthenticationPrincipal UsuarioAutenticado usuarioAutenticado,
+            @PathVariable UUID id
+    ) {
+        return usuarioService.buscarPorId(usuarioAutenticado, id);
     }
 
     @PutMapping("/{id}")
     public UsuarioResponse atualizar(
+            @AuthenticationPrincipal UsuarioAutenticado usuarioAutenticado,
             @PathVariable UUID id,
             @Valid @RequestBody AtualizarUsuarioRequest request
     ) {
-        return usuarioService.atualizar(id, request);
+        return usuarioService.atualizar(usuarioAutenticado, id, request);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void excluir(@PathVariable UUID id) {
-        usuarioService.excluir(id);
+    public void excluir(
+            @AuthenticationPrincipal UsuarioAutenticado usuarioAutenticado,
+            @PathVariable UUID id
+    ) {
+        usuarioService.excluir(usuarioAutenticado, id);
     }
 }

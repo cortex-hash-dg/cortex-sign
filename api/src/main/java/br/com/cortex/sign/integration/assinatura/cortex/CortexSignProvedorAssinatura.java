@@ -54,7 +54,7 @@ public class CortexSignProvedorAssinatura implements ProvedorAssinatura {
     private String montarTermoAceite(DadosAssinatura dados) {
         return "Declaro que li e concordo em assinar eletronicamente o documento '"
                 + dados.documentoTitulo()
-                + "' no Cortex Sign. Reconheço que a confirmação por token e código representa minha manifestação de vontade para este documento, vinculada ao hash SHA-256 "
+                + "' no Cortex Sign. Reconheço que o acesso pelo link seguro de assinatura representa minha manifestação de vontade para este documento, vinculada ao hash SHA-256 "
                 + dados.documentoHashSha256()
                 + ".";
     }
@@ -75,7 +75,7 @@ public class CortexSignProvedorAssinatura implements ProvedorAssinatura {
                 "signatarioId=" + dados.signatarioId(),
                 "signatarioNome=" + limpar(dados.signatarioNome()),
                 "signatarioEmail=" + limpar(dados.signatarioEmail()),
-                "codigoHash=" + dados.codigoHash(),
+                "autenticacaoHash=" + dados.codigoHash(),
                 "ip=" + limpar(dados.ip()),
                 "userAgent=" + limpar(dados.userAgent()),
                 "assinadoEm=" + assinadoEm,

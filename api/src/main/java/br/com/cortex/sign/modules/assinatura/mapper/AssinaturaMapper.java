@@ -7,12 +7,13 @@ import br.com.cortex.sign.modules.assinatura.entity.Assinatura;
 import br.com.cortex.sign.modules.assinatura.entity.SolicitacaoAssinatura;
 import br.com.cortex.sign.modules.documento.entity.Documento;
 import br.com.cortex.sign.modules.signatario.entity.Signatario;
+import br.com.cortex.sign.modules.signatario.enums.TipoSignatario;
 import org.springframework.stereotype.Component;
 
 @Component
 public class AssinaturaMapper {
 
-    public SolicitacaoAssinaturaResponse toResponse(SolicitacaoAssinatura solicitacao, Assinatura assinatura, String codigoTeste) {
+    public SolicitacaoAssinaturaResponse toResponse(SolicitacaoAssinatura solicitacao, Assinatura assinatura) {
         Documento documento = solicitacao.getDocumento();
         Signatario signatario = solicitacao.getSignatario();
 
@@ -25,7 +26,6 @@ public class AssinaturaMapper {
                 signatario.getEmail(),
                 solicitacao.getStatus(),
                 solicitacao.getToken(),
-                codigoTeste,
                 solicitacao.getExpiraEm(),
                 assinatura != null ? toResponse(assinatura) : null,
                 solicitacao.getCriadoEm(),
@@ -62,6 +62,7 @@ public class AssinaturaMapper {
                 documento.getTitulo(),
                 signatario.getNome(),
                 signatario.getEmail(),
+                signatario.getTipo() == TipoSignatario.EXTERNO,
                 solicitacao.getStatus(),
                 solicitacao.getExpiraEm()
         );

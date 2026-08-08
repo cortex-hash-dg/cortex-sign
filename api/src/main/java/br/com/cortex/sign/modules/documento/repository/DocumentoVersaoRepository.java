@@ -8,4 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface DocumentoVersaoRepository extends JpaRepository<DocumentoVersao, UUID> {
 
     List<DocumentoVersao> findAllByDocumentoIdOrderByNumeroVersaoAsc(UUID documentoId);
+
+    DocumentoVersao findTopByDocumentoIdOrderByNumeroVersaoDesc(UUID documentoId);
 }

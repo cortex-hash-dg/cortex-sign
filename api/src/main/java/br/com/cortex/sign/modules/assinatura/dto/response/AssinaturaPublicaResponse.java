@@ -10,6 +10,7 @@ public record AssinaturaPublicaResponse(
         String documentoTitulo,
         String signatarioNome,
         String signatarioEmail,
+        Boolean acessoExternoObrigatorio,
         StatusSolicitacaoAssinatura status,
         LocalDateTime expiraEm
 ) {
