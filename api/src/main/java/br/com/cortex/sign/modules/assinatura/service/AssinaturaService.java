@@ -40,6 +40,7 @@ import br.com.cortex.sign.modules.usuario.entity.Usuario;
 import br.com.cortex.sign.modules.usuario.enums.PerfilUsuario;
 import br.com.cortex.sign.modules.usuario.repository.UsuarioRepository;
 import jakarta.servlet.http.HttpServletRequest;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
@@ -553,11 +554,16 @@ public class AssinaturaService {
 
     private String criarLinkAssinatura(String token) {
         return UriComponentsBuilder
-                .fromUriString(frontendBaseUrl.replaceAll("/+$", ""))
+                .fromUriString(frontendBaseUrlBase())
                 .path("/assinaturas/")
                 .path(token)
                 .build()
                 .toUriString();
+    }
+
+    private String frontendBaseUrlBase() {
+        URI uri = URI.create(frontendBaseUrl.trim());
+        return uri.getScheme() + "://" + uri.getAuthority();
     }
 
     private String mascararDestino(Signatario signatario, CanalCodigoAssinatura canal) {
