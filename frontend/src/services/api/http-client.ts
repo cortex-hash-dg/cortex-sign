@@ -12,6 +12,7 @@ const apiBaseUrl = import.meta.env.VITE_API_URL ?? '/api'
 
 export const httpClient = axios.create({
   baseURL: apiBaseUrl,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -19,6 +20,7 @@ export const httpClient = axios.create({
 
 const authHttpClient = axios.create({
   baseURL: apiBaseUrl,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
