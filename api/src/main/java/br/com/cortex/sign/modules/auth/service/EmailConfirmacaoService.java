@@ -9,6 +9,7 @@ import br.com.cortex.sign.modules.auth.dto.response.ConfirmarEmailResponse;
 import br.com.cortex.sign.modules.auth.entity.TokenConfirmacaoEmail;
 import br.com.cortex.sign.modules.auth.repository.TokenConfirmacaoEmailRepository;
 import br.com.cortex.sign.modules.usuario.entity.Usuario;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
@@ -182,11 +183,16 @@ public class EmailConfirmacaoService {
 
     private String criarLinkConfirmacao(String token) {
         return UriComponentsBuilder
-                .fromUriString(frontendBaseUrl.replaceAll("/+$", ""))
+                .fromUriString(frontendBaseUrlBase())
                 .path("/confirmar-email")
                 .queryParam("token", token)
                 .build()
                 .toUriString();
+    }
+
+    private String frontendBaseUrlBase() {
+        URI uri = URI.create(frontendBaseUrl.trim());
+        return uri.getScheme() + "://" + uri.getAuthority();
     }
 
     private String gerarTokenSeguro() {
