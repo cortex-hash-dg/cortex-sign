@@ -1,37 +1,24 @@
 package br.com.cortex.sign.modules.assinatura.service;
 
 import br.com.cortex.sign.common.exception.ConflitoException;
+import br.com.cortex.sign.common.email.EmailDeliveryService;
+import br.com.cortex.sign.common.email.EmailMessage;
 import br.com.cortex.sign.modules.assinatura.entity.SolicitacaoAssinatura;
 import br.com.cortex.sign.modules.assinatura.enums.CanalCodigoAssinatura;
 import br.com.cortex.sign.modules.signatario.entity.Signatario;
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
-import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeFormatter;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.MailException;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CodigoAssinaturaEntregaService {
 
     private static final DateTimeFormatter FORMATADOR_DATA = DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm");
 
-    private final ObjectProvider<JavaMailSender> mailSenderProvider;
-
-    @Value("${app.notificacao.email.from:}")
-    private String emailOrigem;
-
-    @Value("${app.notificacao.email.from-name:Xsign}")
-    private String nomeOrigem;
-
-    @Value("${app.notificacao.email.reply-to:}")
-    private String emailResposta;
+    private final EmailDeliveryService emailDeliveryService;
 
     public void enviarLink(SolicitacaoAssinatura solicitacao, CanalCodigoAssinatura canal, String linkAssinatura) {
         validarCanalEmail(canal);
@@ -51,39 +38,20 @@ public class CodigoAssinaturaEntregaService {
 
     private void enviarLinkPorEmail(SolicitacaoAssinatura solicitacao, String linkAssinatura) {
         Signatario signatario = solicitacao.getSignatario();
-        JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
-        validarConfiguracaoEmail(mailSender, signatario);
+        validarConfiguracaoEmail(signatario);
 
-        MimeMessage mensagem = mailSender.createMimeMessage();
+        EmailMessage mensagem = new EmailMessage(
+                signatario.getEmail(),
+                signatario.getNome(),
+                "Documento para assinatura no Xsign",
+                criarTextoSimples(solicitacao, linkAssinatura),
+                criarHtml(solicitacao, linkAssinatura)
+        );
 
-        try {
-            MimeMessageHelper helper = new MimeMessageHelper(
-                    mensagem,
-                    MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED,
-                    StandardCharsets.UTF_8.name()
-            );
-
-            helper.setFrom(emailOrigem, nomeOrigem);
-            helper.setTo(signatario.getEmail());
-            if (emailResposta != null && !emailResposta.isBlank()) {
-                helper.setReplyTo(emailResposta);
-            }
-            helper.setSubject("Documento para assinatura no Xsign");
-            helper.setText(criarTextoSimples(solicitacao, linkAssinatura), criarHtml(solicitacao, linkAssinatura));
-
-            mailSender.send(mensagem);
-        } catch (MessagingException | MailException exception) {
-            throw new ConflitoException("Não foi possível enviar o link por e-mail. Tente novamente em instantes.");
-        } catch (java.io.UnsupportedEncodingException exception) {
-            throw new ConflitoException("Remetente de e-mail configurado incorretamente");
-        }
+        emailDeliveryService.enviar(mensagem);
     }
 
-    private void validarConfiguracaoEmail(JavaMailSender mailSender, Signatario signatario) {
-        if (mailSender == null || emailOrigem == null || emailOrigem.isBlank()) {
-            throw new ConflitoException("Envio por e-mail ainda não está configurado");
-        }
-
+    private void validarConfiguracaoEmail(Signatario signatario) {
         if (signatario.getEmail() == null || signatario.getEmail().isBlank()) {
             throw new ConflitoException("O signatário não possui e-mail para receber o link de assinatura");
         }
@@ -115,32 +83,17 @@ public class CodigoAssinaturaEntregaService {
 
     private void enviarCodigoPorEmail(SolicitacaoAssinatura solicitacao, String codigo) {
         Signatario signatario = solicitacao.getSignatario();
-        JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
-        validarConfiguracaoEmail(mailSender, signatario);
+        validarConfiguracaoEmail(signatario);
 
-        MimeMessage mensagem = mailSender.createMimeMessage();
+        EmailMessage mensagem = new EmailMessage(
+                signatario.getEmail(),
+                signatario.getNome(),
+                "Código de acesso para assinatura no Xsign",
+                criarTextoCodigoAcesso(solicitacao, codigo),
+                criarHtmlCodigoAcesso(solicitacao, codigo)
+        );
 
-        try {
-            MimeMessageHelper helper = new MimeMessageHelper(
-                    mensagem,
-                    MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED,
-                    StandardCharsets.UTF_8.name()
-            );
-
-            helper.setFrom(emailOrigem, nomeOrigem);
-            helper.setTo(signatario.getEmail());
-            if (emailResposta != null && !emailResposta.isBlank()) {
-                helper.setReplyTo(emailResposta);
-            }
-            helper.setSubject("Código de acesso para assinatura no Xsign");
-            helper.setText(criarTextoCodigoAcesso(solicitacao, codigo), criarHtmlCodigoAcesso(solicitacao, codigo));
-
-            mailSender.send(mensagem);
-        } catch (MessagingException | MailException exception) {
-            throw new ConflitoException("Não foi possível enviar o código por e-mail. Tente novamente em instantes.");
-        } catch (java.io.UnsupportedEncodingException exception) {
-            throw new ConflitoException("Remetente de e-mail configurado incorretamente");
-        }
+        emailDeliveryService.enviar(mensagem);
     }
 
     private String criarTextoCodigoAcesso(SolicitacaoAssinatura solicitacao, String codigo) {
