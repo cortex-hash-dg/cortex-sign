@@ -2,13 +2,13 @@ package br.com.cortex.sign.modules.auth.service;
 
 import br.com.cortex.sign.common.exception.ConflitoException;
 import br.com.cortex.sign.common.exception.CredenciaisInvalidasException;
+import br.com.cortex.sign.common.email.EmailDeliveryService;
+import br.com.cortex.sign.common.email.EmailMessage;
 import br.com.cortex.sign.modules.auth.dto.response.ConfirmacaoEmailSolicitadaResponse;
 import br.com.cortex.sign.modules.auth.dto.response.ConfirmarEmailResponse;
 import br.com.cortex.sign.modules.auth.entity.TokenConfirmacaoEmail;
 import br.com.cortex.sign.modules.auth.repository.TokenConfirmacaoEmailRepository;
 import br.com.cortex.sign.modules.usuario.entity.Usuario;
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
@@ -17,17 +17,15 @@ import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.HexFormat;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.ObjectProvider;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.MailException;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class EmailConfirmacaoService {
 
     private static final int TOKEN_BYTES = 48;
@@ -35,16 +33,7 @@ public class EmailConfirmacaoService {
     private static final DateTimeFormatter FORMATADOR_DATA = DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm");
 
     private final TokenConfirmacaoEmailRepository tokenConfirmacaoEmailRepository;
-    private final ObjectProvider<JavaMailSender> mailSenderProvider;
-
-    @Value("${app.notificacao.email.from:}")
-    private String emailOrigem;
-
-    @Value("${app.notificacao.email.from-name:Xsign}")
-    private String nomeOrigem;
-
-    @Value("${app.notificacao.email.reply-to:}")
-    private String emailResposta;
+    private final EmailDeliveryService emailDeliveryService;
 
     @Value("${app.frontend.base-url:http://localhost:5173}")
     private String frontendBaseUrl;
@@ -62,8 +51,7 @@ public class EmailConfirmacaoService {
             );
         }
 
-        JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
-        validarConfiguracao(mailSender, usuario);
+        validarConfiguracao(usuario);
 
         LocalDateTime agora = LocalDateTime.now();
         tokenConfirmacaoEmailRepository.findAllByUsuarioIdAndUsadoEmIsNull(usuario.getId())
@@ -78,7 +66,7 @@ public class EmailConfirmacaoService {
         tokenConfirmacao.setExpiraEm(expiraEm);
         tokenConfirmacaoEmailRepository.saveAndFlush(tokenConfirmacao);
 
-        enviarEmail(mailSender, usuario, token, expiraEm);
+        enviarEmail(usuario, token, expiraEm);
 
         return new ConfirmacaoEmailSolicitadaResponse(
                 usuario.getEmail(),
@@ -110,41 +98,23 @@ public class EmailConfirmacaoService {
         );
     }
 
-    private void validarConfiguracao(JavaMailSender mailSender, Usuario usuario) {
-        if (mailSender == null || emailOrigem == null || emailOrigem.isBlank()) {
-            throw new ConflitoException("Envio de confirmação por e-mail ainda não está configurado");
-        }
-
+    private void validarConfiguracao(Usuario usuario) {
         if (usuario.getEmail() == null || usuario.getEmail().isBlank()) {
             throw new ConflitoException("Usuário sem e-mail cadastrado para confirmação");
         }
     }
 
-    private void enviarEmail(JavaMailSender mailSender, Usuario usuario, String token, LocalDateTime expiraEm) {
-        MimeMessage mensagem = mailSender.createMimeMessage();
+    private void enviarEmail(Usuario usuario, String token, LocalDateTime expiraEm) {
         String linkConfirmacao = criarLinkConfirmacao(token);
+        EmailMessage mensagem = new EmailMessage(
+                usuario.getEmail(),
+                usuario.getNome(),
+                "Confirme seu e-mail no Xsign",
+                criarTextoSimples(usuario, linkConfirmacao, expiraEm),
+                criarHtml(usuario, linkConfirmacao, expiraEm)
+        );
 
-        try {
-            MimeMessageHelper helper = new MimeMessageHelper(
-                    mensagem,
-                    MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED,
-                    StandardCharsets.UTF_8.name()
-            );
-
-            helper.setFrom(emailOrigem, nomeOrigem);
-            helper.setTo(usuario.getEmail());
-            if (emailResposta != null && !emailResposta.isBlank()) {
-                helper.setReplyTo(emailResposta);
-            }
-            helper.setSubject("Confirme seu e-mail no Xsign");
-            helper.setText(criarTextoSimples(usuario, linkConfirmacao, expiraEm), criarHtml(usuario, linkConfirmacao, expiraEm));
-
-            mailSender.send(mensagem);
-        } catch (MessagingException | MailException exception) {
-            throw new ConflitoException("Não foi possível enviar a confirmação por e-mail. Tente novamente em instantes.");
-        } catch (java.io.UnsupportedEncodingException exception) {
-            throw new ConflitoException("Remetente de e-mail configurado incorretamente");
-        }
+        emailDeliveryService.enviar(mensagem);
     }
 
     private String criarTextoSimples(Usuario usuario, String linkConfirmacao, LocalDateTime expiraEm) {
