@@ -52,6 +52,9 @@ app:
       from: ${MAIL_FROM:}
       from-name: ${MAIL_FROM_NAME:Xsign}
       reply-to: ${MAIL_REPLY_TO:}
+      brevo:
+        api-key: ${BREVO_API_KEY:}
+        api-url: ${BREVO_API_URL:https://api.brevo.com/v3/smtp/email}
 
   email-verificacao:
     expiration-minutes: ${EMAIL_VERIFICATION_EXPIRATION_MINUTES:60}
