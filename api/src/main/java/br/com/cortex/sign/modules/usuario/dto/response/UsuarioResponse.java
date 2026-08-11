@@ -10,6 +10,8 @@ public record UsuarioResponse(
         String organizacaoNome,
         String nome,
         String email,
+        String cpf,
+        String telefone,
         PerfilUsuario perfil,
         Boolean ativo,
         LocalDateTime criadoEm,
