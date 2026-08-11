@@ -13,6 +13,8 @@ export type User = {
   organizacaoNome: string
   nome: string
   email: string
+  cpf?: string | null
+  telefone?: string | null
   perfil: UserRole
   ativo: boolean
   criadoEm: string
