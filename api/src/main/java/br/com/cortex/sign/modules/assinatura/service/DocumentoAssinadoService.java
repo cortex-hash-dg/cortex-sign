@@ -863,7 +863,12 @@ public class DocumentoAssinadoService {
         return texto
                 .replace('–', '-')
                 .replace('—', '-')
+                .replace('‘', '\'')
                 .replace('’', '\'')
+                .replace('“', '"')
+                .replace('”', '"')
+                .replace('•', '-')
+                .replaceAll("\\p{Cntrl}", " ")
                 .replaceAll("[^\\u0020-\\u00FF]", " ");
     }
 
