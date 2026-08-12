@@ -4,6 +4,7 @@ import {
   Mail,
   Pencil,
   Plus,
+  Search,
   Send,
   Trash2,
   UploadCloud,
@@ -22,6 +23,7 @@ import { PageSection } from '../../../shared/ui/page-section'
 import { StatusBadge } from '../../../shared/ui/status-badge'
 import { useCurrentUser } from '../../auth/hooks/use-current-user'
 import { listOrganizations } from '../../organizations/api/organizations-api'
+import { listUsers, type User } from '../../users/api/users-api'
 import { SignNowModal } from '../components/sign-now-modal'
 import {
   createDocument,
@@ -118,6 +120,8 @@ export function StartSignaturePage() {
   const [fileInputVersion, setFileInputVersion] = useState(0)
   const [selectedSigner, setSelectedSigner] = useState<Signer | null>(null)
   const [signerForm, setSignerForm] = useState<SignerFormState>(emptySignerForm)
+  const [registeredUserSearch, setRegisteredUserSearch] = useState('')
+  const [isRegisteredUserSelectOpen, setIsRegisteredUserSelectOpen] = useState(false)
   const [validityDays, setValidityDays] = useState(7)
   const [hasValidity, setHasValidity] = useState(true)
   const [createdRequests, setCreatedRequests] = useState<SignatureRequest[]>([])
@@ -127,6 +131,7 @@ export function StartSignaturePage() {
   const currentUserEmail = currentUserQuery.data?.email.toLowerCase()
   const canSendInvitationEmail = Boolean(currentUserQuery.data?.emailVerificado)
   const organizationsQuery = useQuery({ queryKey: ['organizations'], queryFn: listOrganizations })
+  const usersQuery = useQuery({ queryKey: ['users'], queryFn: listUsers, enabled: step === 2 })
   const documentQuery = useQuery({
     queryKey: ['document', documentId],
     queryFn: () => getDocument(documentId as string),
@@ -154,6 +159,26 @@ export function StartSignaturePage() {
     [signatureRequests],
   )
   const signersToSend = signers.filter((signer) => !signersWithRequestIds.has(signer.id))
+  const filteredRegisteredUsers = useMemo(() => {
+    const search = registeredUserSearch.trim().toLowerCase()
+    const activeUsers = (usersQuery.data ?? []).filter((user) => user.ativo)
+
+    if (!search) {
+      return activeUsers.slice(0, 8)
+    }
+
+    return activeUsers
+      .filter((user) =>
+        [
+          user.nome,
+          user.email,
+          user.cpf ?? '',
+          user.telefone ?? '',
+          user.organizacaoNome,
+        ].join(' ').toLowerCase().includes(search),
+      )
+      .slice(0, 8)
+  }, [registeredUserSearch, usersQuery.data])
 
   useEffect(() => {
     if (documentIdFromUrl && documentIdFromUrl !== documentId) {
@@ -405,10 +430,14 @@ export function StartSignaturePage() {
   function clearSignerForm() {
     setSelectedSigner(null)
     setSignerForm(emptySignerForm)
+    setRegisteredUserSearch('')
+    setIsRegisteredUserSelectOpen(false)
   }
 
   function editSigner(signer: Signer) {
     setSelectedSigner(signer)
+    setRegisteredUserSearch('')
+    setIsRegisteredUserSelectOpen(false)
     setSignerForm({
       nome: signer.nome,
       email: signer.email,
@@ -417,6 +446,29 @@ export function StartSignaturePage() {
       tipo: signer.tipo,
       ordemAssinatura: signer.ordemAssinatura,
     })
+  }
+
+  function selectRegisteredUser(user: User) {
+    const isAlreadySigner = signers.some(
+      (signer) => signer.email.toLowerCase() === user.email.toLowerCase(),
+    )
+
+    if (isAlreadySigner) {
+      toast.info('Este usuário já está na lista de signatários.')
+    }
+
+    setSelectedSigner(null)
+    setSignerForm((current) => ({
+      ...current,
+      nome: user.nome,
+      email: user.email,
+      numeroDocumento: user.cpf ?? '',
+      telefone: user.telefone ?? '',
+      tipo: 'INTERNO',
+      ordemAssinatura: signers.length + 1,
+    }))
+    setRegisteredUserSearch(`${user.nome} - ${user.email}`)
+    setIsRegisteredUserSelectOpen(false)
   }
 
   function confirmDeleteSigner(signer: Signer) {
@@ -616,6 +668,60 @@ export function StartSignaturePage() {
               <p className="text-xs leading-5 text-muted">Adiciona o usuário logado como signatário interno para agilizar fluxos em que você também assina.</p>
             </div>
             <form className="grid gap-3 p-4" onSubmit={submitSigner}>
+              <label className="relative grid gap-2 text-sm font-medium text-ink">
+                Buscar usuário cadastrado
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={16} aria-hidden="true" />
+                  <input
+                    className="min-h-10 w-full rounded-control border border-line bg-white pl-9 pr-3 text-sm text-ink shadow-card transition-colors placeholder:text-muted/70 focus:border-brand-500"
+                    value={registeredUserSearch}
+                    onChange={(event) => {
+                      setRegisteredUserSearch(event.target.value)
+                      setIsRegisteredUserSelectOpen(true)
+                    }}
+                    onFocus={() => setIsRegisteredUserSelectOpen(true)}
+                    onBlur={() => window.setTimeout(() => setIsRegisteredUserSelectOpen(false), 120)}
+                    placeholder="Pesquise por nome, e-mail, CPF ou telefone"
+                    type="search"
+                    autoComplete="off"
+                  />
+                </div>
+
+                {isRegisteredUserSelectOpen && (
+                  <div className="absolute left-0 right-0 top-full z-20 mt-2 max-h-72 overflow-auto rounded-card border border-line bg-white p-2 shadow-dropdown">
+                    {usersQuery.isLoading && (
+                      <p className="px-3 py-2 text-sm font-normal text-muted">Buscando usuários...</p>
+                    )}
+
+                    {!usersQuery.isLoading && filteredRegisteredUsers.length === 0 && (
+                      <p className="px-3 py-2 text-sm font-normal text-muted">Nenhum usuário encontrado. Você ainda pode preencher manualmente.</p>
+                    )}
+
+                    {filteredRegisteredUsers.map((user) => (
+                      <button
+                        className="grid w-full gap-1 rounded-control px-3 py-2 text-left transition-colors hover:bg-brand-50 focus:bg-brand-50"
+                        key={user.id}
+                        type="button"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => selectRegisteredUser(user)}
+                      >
+                        <span className="truncate text-sm font-semibold text-ink">{user.nome}</span>
+                        <span className="truncate text-xs font-normal text-muted">{user.email}</span>
+                        <span className="truncate text-xs font-normal text-muted">
+                          {user.organizacaoNome} · {user.perfil.replaceAll('_', ' ').toLowerCase()}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </label>
+
+              <div className="flex items-center gap-3 py-1 text-xs font-medium uppercase tracking-[0.12em] text-muted">
+                <span className="h-px flex-1 bg-line" />
+                <span>ou preencha manualmente</span>
+                <span className="h-px flex-1 bg-line" />
+              </div>
+
               <input className="min-h-10 rounded-control border border-line bg-white px-3 text-sm" value={signerForm.nome} onChange={(event) => setSignerForm((current) => ({ ...current, nome: event.target.value }))} placeholder="Nome" required />
               <input className="min-h-10 rounded-control border border-line bg-white px-3 text-sm" value={signerForm.email} onChange={(event) => setSignerForm((current) => ({ ...current, email: event.target.value }))} placeholder="E-mail" type="email" required />
               <input className="min-h-10 rounded-control border border-line bg-white px-3 text-sm" value={signerForm.numeroDocumento} onChange={(event) => setSignerForm((current) => ({ ...current, numeroDocumento: event.target.value }))} placeholder="CPF/CNPJ opcional" />

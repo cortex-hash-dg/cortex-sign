@@ -38,6 +38,8 @@ public class UsuarioMapper {
                 organizacao != null ? organizacao.getNome() : null,
                 usuario.getNome(),
                 usuario.getEmail(),
+                usuario.getCpf(),
+                usuario.getTelefone(),
                 usuario.getPerfil(),
                 usuario.getAtivo(),
                 usuario.getCriadoEm(),

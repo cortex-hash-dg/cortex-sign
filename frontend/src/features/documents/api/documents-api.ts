@@ -164,9 +164,7 @@ export async function createDocument(payload: CreateDocumentPayload) {
 
   formData.append('arquivo', payload.arquivo)
 
-  const response = await httpClient.post<DocumentDetail>('/documentos', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
+  const response = await httpClient.post<DocumentDetail>('/documentos', formData)
 
   return response.data
 }

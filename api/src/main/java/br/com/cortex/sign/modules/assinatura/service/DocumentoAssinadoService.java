@@ -1,6 +1,7 @@
 package br.com.cortex.sign.modules.assinatura.service;
 
 import br.com.cortex.sign.common.exception.ConflitoException;
+import br.com.cortex.sign.common.exception.ArmazenamentoException;
 import br.com.cortex.sign.integration.storage.StorageProvider;
 import br.com.cortex.sign.integration.storage.dto.ArquivoUploadResultado;
 import br.com.cortex.sign.modules.assinatura.entity.Assinatura;
@@ -36,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -52,6 +54,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class DocumentoAssinadoService {
 
     private static final String PDF_CONTENT_TYPE = "application/pdf";
@@ -113,7 +116,11 @@ public class DocumentoAssinadoService {
             documentoRepository.saveAndFlush(documento);
             registrarNovaVersao(documento, arquivoAssinado);
             registrarCertificado(certificadoId, documento, assinatura, upload, urlVerificacao);
+        } catch (ArmazenamentoException exception) {
+            log.warn("Falha de armazenamento ao gravar manifesto do documento {}: {}", documento.getId(), exception.getMessage(), exception);
+            throw exception;
         } catch (Exception exception) {
+            log.warn("Falha ao gravar manifesto do documento {}: {}", documento.getId(), exception.getMessage(), exception);
             throw new ConflitoException("Não foi possível gravar o manifesto de assinatura no PDF");
         }
     }
@@ -856,7 +863,12 @@ public class DocumentoAssinadoService {
         return texto
                 .replace('–', '-')
                 .replace('—', '-')
+                .replace('‘', '\'')
                 .replace('’', '\'')
+                .replace('“', '"')
+                .replace('”', '"')
+                .replace('•', '-')
+                .replaceAll("\\p{Cntrl}", " ")
                 .replaceAll("[^\\u0020-\\u00FF]", " ");
     }
 
