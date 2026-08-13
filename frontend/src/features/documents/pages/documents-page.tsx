@@ -148,13 +148,15 @@ export function DocumentsPage() {
   const [requestToSign, setRequestToSign] = useState<SignatureRequest | null>(null)
 
   const currentUserQuery = useCurrentUser()
-  const currentUserEmail = currentUserQuery.data?.email.toLowerCase()
-  const canSendInvitationEmail = Boolean(currentUserQuery.data?.emailVerificado)
+  const currentUser = currentUserQuery.data
+  const currentUserEmail = currentUser?.email.toLowerCase()
+  const canSendInvitationEmail = Boolean(currentUser?.emailVerificado)
+  const canFilterByOrganization = currentUser?.perfil === 'SUPER_ADMINISTRADOR'
 
-  const organizationsQuery = useQuery({ queryKey: ['organizations'], queryFn: listOrganizations })
+  const organizationsQuery = useQuery({ queryKey: ['organizations'], queryFn: listOrganizations, enabled: canFilterByOrganization })
   const documentsQuery = useQuery({
     queryKey: ['documents', organizationFilter],
-    queryFn: () => listDocuments(organizationFilter || undefined),
+    queryFn: () => listDocuments(canFilterByOrganization ? organizationFilter || undefined : undefined),
   })
   const selectedDocumentQuery = useQuery({
     queryKey: ['document', selectedDocumentId],
@@ -332,16 +334,18 @@ export function DocumentsPage() {
                 placeholder="Buscar por documento, ID, status ou organização"
               />
             </label>
-            <select
-              className="min-h-10 rounded-control border border-line bg-white px-3 text-sm text-ink transition-colors focus:border-brand-500"
-              value={organizationFilter}
-              onChange={(event) => changeOrganizationFilter(event.target.value)}
-            >
-              <option value="">Todas as organizações</option>
-              {organizationsQuery.data?.map((organization) => (
-                <option key={organization.id} value={organization.id}>{organization.nome}</option>
-              ))}
-            </select>
+            {canFilterByOrganization && (
+              <select
+                className="min-h-10 rounded-control border border-line bg-white px-3 text-sm text-ink transition-colors focus:border-brand-500"
+                value={organizationFilter}
+                onChange={(event) => changeOrganizationFilter(event.target.value)}
+              >
+                <option value="">Todas as organizações</option>
+                {organizationsQuery.data?.map((organization) => (
+                  <option key={organization.id} value={organization.id}>{organization.nome}</option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div className="flex shrink-0 gap-2 overflow-x-auto border-b border-line px-4 py-3">

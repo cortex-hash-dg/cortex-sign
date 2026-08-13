@@ -504,6 +504,10 @@ public class AssinaturaService {
         if (usuario.getOrganizacao() == null || !usuario.getOrganizacao().getId().equals(documento.getOrganizacao().getId())) {
             throw new AcessoNegadoException("Você não tem permissão para acessar este documento");
         }
+
+        if (!usuarioPodeVisualizarDocumento(usuario, documento)) {
+            throw new AcessoNegadoException("Você não tem permissão para acessar este documento");
+        }
     }
 
     private Usuario buscarUsuarioAutenticado(UsuarioAutenticado usuarioAutenticado) {
@@ -519,6 +523,17 @@ public class AssinaturaService {
         }
 
         return usuario;
+    }
+
+    private boolean usuarioPodeVisualizarDocumento(Usuario usuario, Documento documento) {
+        return documentoRepository.findDocumentosVisiveisParaUsuario(
+                        documento.getOrganizacao().getId(),
+                        usuario.getId(),
+                        usuario.getEmail(),
+                        usuario.getCpf() == null ? "" : usuario.getCpf()
+                )
+                .stream()
+                .anyMatch(documentoVisivel -> documentoVisivel.getId().equals(documento.getId()));
     }
 
     private LocalDateTime resolverExpiracao(CriarSolicitacaoAssinaturaRequest request) {
