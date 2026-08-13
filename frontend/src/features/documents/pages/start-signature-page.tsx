@@ -22,7 +22,6 @@ import { InlineMessage } from '../../../shared/ui/inline-message'
 import { PageSection } from '../../../shared/ui/page-section'
 import { StatusBadge } from '../../../shared/ui/status-badge'
 import { useCurrentUser } from '../../auth/hooks/use-current-user'
-import { getAccessToken } from '../../auth/lib/auth-storage'
 import { listOrganizations } from '../../organizations/api/organizations-api'
 import { listUsers, type User } from '../../users/api/users-api'
 import { SignNowModal } from '../components/sign-now-modal'
@@ -197,10 +196,6 @@ export function StartSignaturePage() {
     mutationFn: async () => {
       if (uploadForm.arquivos.length === 0) {
         throw new Error('Selecione ao menos um PDF para enviar.')
-      }
-
-      if (!getAccessToken()) {
-        throw new Error('Sua sessão expirou. Faça login novamente antes de enviar documentos.')
       }
 
       const createdDocuments: DocumentDetail[] = []
