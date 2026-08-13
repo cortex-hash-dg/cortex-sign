@@ -1,4 +1,5 @@
 import { httpClient } from '../../../services/api/http-client'
+import { getAccessToken } from '../../auth/lib/auth-storage'
 
 export type DocumentStatus =
   | 'RASCUNHO'
@@ -164,7 +165,11 @@ export async function createDocument(payload: CreateDocumentPayload) {
 
   formData.append('arquivo', payload.arquivo)
 
-  const response = await httpClient.post<DocumentDetail>('/documentos', formData)
+  const token = getAccessToken()
+
+  const response = await httpClient.post<DocumentDetail>('/documentos', formData, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  })
 
   return response.data
 }
