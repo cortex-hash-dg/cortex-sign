@@ -22,6 +22,7 @@ import { InlineMessage } from '../../../shared/ui/inline-message'
 import { PageSection } from '../../../shared/ui/page-section'
 import { StatusBadge } from '../../../shared/ui/status-badge'
 import { useCurrentUser } from '../../auth/hooks/use-current-user'
+import { getAccessToken } from '../../auth/lib/auth-storage'
 import { listOrganizations } from '../../organizations/api/organizations-api'
 import { listUsers, type User } from '../../users/api/users-api'
 import { SignNowModal } from '../components/sign-now-modal'
@@ -128,10 +129,13 @@ export function StartSignaturePage() {
   const [requestToSign, setRequestToSign] = useState<SignatureRequest | null>(null)
 
   const currentUserQuery = useCurrentUser()
-  const currentUserEmail = currentUserQuery.data?.email.toLowerCase()
-  const canSendInvitationEmail = Boolean(currentUserQuery.data?.emailVerificado)
-  const organizationsQuery = useQuery({ queryKey: ['organizations'], queryFn: listOrganizations })
-  const usersQuery = useQuery({ queryKey: ['users'], queryFn: listUsers, enabled: step === 2 })
+  const currentUser = currentUserQuery.data
+  const currentUserEmail = currentUser?.email.toLowerCase()
+  const canSendInvitationEmail = Boolean(currentUser?.emailVerificado)
+  const canSelectOrganization = currentUser?.perfil === 'SUPER_ADMINISTRADOR'
+  const canSearchRegisteredUsers = currentUser?.perfil === 'SUPER_ADMINISTRADOR' || currentUser?.perfil === 'ADMINISTRADOR_ORGANIZACAO'
+  const organizationsQuery = useQuery({ queryKey: ['organizations'], queryFn: listOrganizations, enabled: canSelectOrganization })
+  const usersQuery = useQuery({ queryKey: ['users'], queryFn: listUsers, enabled: step === 2 && canSearchRegisteredUsers })
   const documentQuery = useQuery({
     queryKey: ['document', documentId],
     queryFn: () => getDocument(documentId as string),
@@ -193,6 +197,10 @@ export function StartSignaturePage() {
     mutationFn: async () => {
       if (uploadForm.arquivos.length === 0) {
         throw new Error('Selecione ao menos um PDF para enviar.')
+      }
+
+      if (!getAccessToken()) {
+        throw new Error('Sua sessão expirou. Faça login novamente antes de enviar documentos.')
       }
 
       const createdDocuments: DocumentDetail[] = []
@@ -587,19 +595,21 @@ export function StartSignaturePage() {
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
           <PageSection title="1. Enviar documento">
             <form className="grid gap-4 p-4" onSubmit={submitUpload}>
-              <label className="grid gap-2 text-sm font-medium text-ink">
-                Organização
-                <select
-                  className="min-h-11 rounded-control border border-line bg-white px-3 text-sm text-ink transition-colors focus:border-brand-500"
-                  value={uploadForm.organizacaoId}
-                  onChange={(event) => setUploadForm((current) => ({ ...current, organizacaoId: event.target.value }))}
-                >
-                  <option value="">Organização do usuário logado</option>
-                  {organizationsQuery.data?.map((organization) => (
-                    <option key={organization.id} value={organization.id}>{organization.nome}</option>
-                  ))}
-                </select>
-              </label>
+              {canSelectOrganization && (
+                <label className="grid gap-2 text-sm font-medium text-ink">
+                  Organização
+                  <select
+                    className="min-h-11 rounded-control border border-line bg-white px-3 text-sm text-ink transition-colors focus:border-brand-500"
+                    value={uploadForm.organizacaoId}
+                    onChange={(event) => setUploadForm((current) => ({ ...current, organizacaoId: event.target.value }))}
+                  >
+                    <option value="">Selecione uma organização</option>
+                    {organizationsQuery.data?.map((organization) => (
+                      <option key={organization.id} value={organization.id}>{organization.nome}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
 
               <label className="grid gap-2 text-sm font-medium text-ink">
                 Título do documento
@@ -668,59 +678,63 @@ export function StartSignaturePage() {
               <p className="text-xs leading-5 text-muted">Adiciona o usuário logado como signatário interno para agilizar fluxos em que você também assina.</p>
             </div>
             <form className="grid gap-3 p-4" onSubmit={submitSigner}>
-              <label className="relative grid gap-2 text-sm font-medium text-ink">
-                Buscar usuário cadastrado
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={16} aria-hidden="true" />
-                  <input
-                    className="min-h-10 w-full rounded-control border border-line bg-white pl-9 pr-3 text-sm text-ink shadow-card transition-colors placeholder:text-muted/70 focus:border-brand-500"
-                    value={registeredUserSearch}
-                    onChange={(event) => {
-                      setRegisteredUserSearch(event.target.value)
-                      setIsRegisteredUserSelectOpen(true)
-                    }}
-                    onFocus={() => setIsRegisteredUserSelectOpen(true)}
-                    onBlur={() => window.setTimeout(() => setIsRegisteredUserSelectOpen(false), 120)}
-                    placeholder="Pesquise por nome, e-mail, CPF ou telefone"
-                    type="search"
-                    autoComplete="off"
-                  />
-                </div>
+              {canSearchRegisteredUsers && (
+                <>
+                  <label className="relative grid gap-2 text-sm font-medium text-ink">
+                    Buscar usuário cadastrado
+                    <div className="relative">
+                      <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={16} aria-hidden="true" />
+                      <input
+                        className="min-h-10 w-full rounded-control border border-line bg-white pl-9 pr-3 text-sm text-ink shadow-card transition-colors placeholder:text-muted/70 focus:border-brand-500"
+                        value={registeredUserSearch}
+                        onChange={(event) => {
+                          setRegisteredUserSearch(event.target.value)
+                          setIsRegisteredUserSelectOpen(true)
+                        }}
+                        onFocus={() => setIsRegisteredUserSelectOpen(true)}
+                        onBlur={() => window.setTimeout(() => setIsRegisteredUserSelectOpen(false), 120)}
+                        placeholder="Pesquise por nome, e-mail, CPF ou telefone"
+                        type="search"
+                        autoComplete="off"
+                      />
+                    </div>
 
-                {isRegisteredUserSelectOpen && (
-                  <div className="absolute left-0 right-0 top-full z-20 mt-2 max-h-72 overflow-auto rounded-card border border-line bg-white p-2 shadow-dropdown">
-                    {usersQuery.isLoading && (
-                      <p className="px-3 py-2 text-sm font-normal text-muted">Buscando usuários...</p>
+                    {isRegisteredUserSelectOpen && (
+                      <div className="absolute left-0 right-0 top-full z-20 mt-2 max-h-72 overflow-auto rounded-card border border-line bg-white p-2 shadow-dropdown">
+                        {usersQuery.isLoading && (
+                          <p className="px-3 py-2 text-sm font-normal text-muted">Buscando usuários...</p>
+                        )}
+
+                        {!usersQuery.isLoading && filteredRegisteredUsers.length === 0 && (
+                          <p className="px-3 py-2 text-sm font-normal text-muted">Nenhum usuário encontrado. Você ainda pode preencher manualmente.</p>
+                        )}
+
+                        {filteredRegisteredUsers.map((user) => (
+                          <button
+                            className="grid w-full gap-1 rounded-control px-3 py-2 text-left transition-colors hover:bg-brand-50 focus:bg-brand-50"
+                            key={user.id}
+                            type="button"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => selectRegisteredUser(user)}
+                          >
+                            <span className="truncate text-sm font-semibold text-ink">{user.nome}</span>
+                            <span className="truncate text-xs font-normal text-muted">{user.email}</span>
+                            <span className="truncate text-xs font-normal text-muted">
+                              {user.organizacaoNome} · {user.perfil.replaceAll('_', ' ').toLowerCase()}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
                     )}
+                  </label>
 
-                    {!usersQuery.isLoading && filteredRegisteredUsers.length === 0 && (
-                      <p className="px-3 py-2 text-sm font-normal text-muted">Nenhum usuário encontrado. Você ainda pode preencher manualmente.</p>
-                    )}
-
-                    {filteredRegisteredUsers.map((user) => (
-                      <button
-                        className="grid w-full gap-1 rounded-control px-3 py-2 text-left transition-colors hover:bg-brand-50 focus:bg-brand-50"
-                        key={user.id}
-                        type="button"
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => selectRegisteredUser(user)}
-                      >
-                        <span className="truncate text-sm font-semibold text-ink">{user.nome}</span>
-                        <span className="truncate text-xs font-normal text-muted">{user.email}</span>
-                        <span className="truncate text-xs font-normal text-muted">
-                          {user.organizacaoNome} · {user.perfil.replaceAll('_', ' ').toLowerCase()}
-                        </span>
-                      </button>
-                    ))}
+                  <div className="flex items-center gap-3 py-1 text-xs font-medium uppercase tracking-[0.12em] text-muted">
+                    <span className="h-px flex-1 bg-line" />
+                    <span>ou preencha manualmente</span>
+                    <span className="h-px flex-1 bg-line" />
                   </div>
-                )}
-              </label>
-
-              <div className="flex items-center gap-3 py-1 text-xs font-medium uppercase tracking-[0.12em] text-muted">
-                <span className="h-px flex-1 bg-line" />
-                <span>ou preencha manualmente</span>
-                <span className="h-px flex-1 bg-line" />
-              </div>
+                </>
+              )}
 
               <input className="min-h-10 rounded-control border border-line bg-white px-3 text-sm" value={signerForm.nome} onChange={(event) => setSignerForm((current) => ({ ...current, nome: event.target.value }))} placeholder="Nome" required />
               <input className="min-h-10 rounded-control border border-line bg-white px-3 text-sm" value={signerForm.email} onChange={(event) => setSignerForm((current) => ({ ...current, email: event.target.value }))} placeholder="E-mail" type="email" required />
