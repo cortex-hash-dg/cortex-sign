@@ -107,7 +107,12 @@ public class DocumentoService {
         Organizacao organizacao = resolverOrganizacaoDoUsuario(usuario);
         validarOrganizacaoSolicitada(usuario, organizacaoId);
 
-        return documentoRepository.findAllByOrganizacaoIdOrderByCriadoEmDesc(organizacao.getId())
+        return documentoRepository.findDocumentosVisiveisParaUsuario(
+                        organizacao.getId(),
+                        usuario.getId(),
+                        usuario.getEmail(),
+                        usuario.getCpf() == null ? "" : usuario.getCpf()
+                )
                 .stream()
                 .map(documentoMapper::toResumoResponse)
                 .toList();
@@ -203,8 +208,15 @@ public class DocumentoService {
         Documento documento = documentoRepository.findById(documentoId)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Documento não encontrado"));
 
-        if (!isSuperAdministrador(usuario)
-                && !documento.getOrganizacao().getId().equals(resolverOrganizacaoDoUsuario(usuario).getId())) {
+        if (isSuperAdministrador(usuario)) {
+            return documento;
+        }
+
+        if (!documento.getOrganizacao().getId().equals(resolverOrganizacaoDoUsuario(usuario).getId())) {
+            throw new AcessoNegadoException("Você não tem permissão para acessar este documento");
+        }
+
+        if (!usuarioPodeVisualizarDocumento(usuario, documento)) {
             throw new AcessoNegadoException("Você não tem permissão para acessar este documento");
         }
 
@@ -267,5 +279,16 @@ public class DocumentoService {
 
     private boolean isSuperAdministrador(Usuario usuario) {
         return usuario.getPerfil() == PerfilUsuario.SUPER_ADMINISTRADOR;
+    }
+
+    private boolean usuarioPodeVisualizarDocumento(Usuario usuario, Documento documento) {
+        return documentoRepository.findDocumentosVisiveisParaUsuario(
+                        documento.getOrganizacao().getId(),
+                        usuario.getId(),
+                        usuario.getEmail(),
+                        usuario.getCpf() == null ? "" : usuario.getCpf()
+                )
+                .stream()
+                .anyMatch(documentoVisivel -> documentoVisivel.getId().equals(documento.getId()));
     }
 }

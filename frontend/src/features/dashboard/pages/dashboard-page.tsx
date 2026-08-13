@@ -19,6 +19,7 @@ import { StatusBadge } from '../../../shared/ui/status-badge'
 import { listAuditLogs } from '../../audit/api/audit-api'
 import { listDocuments, type DocumentStatus } from '../../documents/api/documents-api'
 import { listUsers } from '../../users/api/users-api'
+import { useCurrentUser } from '../../auth/hooks/use-current-user'
 
 const documentStatusLabels: Record<DocumentStatus, string> = {
   RASCUNHO: 'Rascunho',
@@ -81,9 +82,14 @@ function formatAction(action: string) {
 }
 
 export function DashboardPage() {
+  const currentUserQuery = useCurrentUser()
+  const currentUser = currentUserQuery.data
+  const canViewUsers = currentUser?.perfil === 'SUPER_ADMINISTRADOR' || currentUser?.perfil === 'ADMINISTRADOR_ORGANIZACAO'
+  const canViewAudit = canViewUsers || currentUser?.perfil === 'AUDITOR'
+
   const documentsQuery = useQuery({ queryKey: ['documents', 'dashboard'], queryFn: () => listDocuments() })
-  const usersQuery = useQuery({ queryKey: ['users'], queryFn: listUsers })
-  const auditLogsQuery = useQuery({ queryKey: ['audit-logs', 'dashboard'], queryFn: () => listAuditLogs() })
+  const usersQuery = useQuery({ queryKey: ['users'], queryFn: listUsers, enabled: canViewUsers })
+  const auditLogsQuery = useQuery({ queryKey: ['audit-logs', 'dashboard'], queryFn: () => listAuditLogs(), enabled: canViewAudit })
 
   const documents = documentsQuery.data ?? []
   const users = usersQuery.data ?? []
@@ -123,13 +129,13 @@ export function DashboardPage() {
       icon: CheckCircle2,
       iconClassName: 'bg-green-50 text-success',
     },
-    {
+    ...(canViewUsers ? [{
       label: 'Usuários',
       value: users.length,
       detail: 'Contas cadastradas',
       icon: UsersRound,
       iconClassName: 'bg-surface-page text-brand-900',
-    },
+    }] : []),
   ]
 
   return (
@@ -233,10 +239,11 @@ export function DashboardPage() {
           </PageSection>
         </div>
 
-        <PageSection title="Atividade recente" action={<Link className="text-sm font-medium text-brand-500" to="/app/auditoria">Ver todas</Link>}>
+        <PageSection title={canViewAudit ? 'Atividade recente' : 'Seu histórico'} action={canViewAudit ? <Link className="text-sm font-medium text-brand-500" to="/app/auditoria">Ver todas</Link> : undefined}>
           <div className="grid gap-3 p-4">
-            {auditLogsQuery.isLoading && <InlineMessage message="Carregando atividades..." />}
-            {!auditLogsQuery.isLoading && recentActivities.length === 0 && <EmptyState title="Sem atividades" description="Eventos de auditoria aparecerão aqui." />}
+            {canViewAudit && auditLogsQuery.isLoading && <InlineMessage message="Carregando atividades..." />}
+            {!canViewAudit && <EmptyState title="Histórico restrito" description="Você verá aqui apenas documentos criados por você ou enviados para sua assinatura." />}
+            {canViewAudit && !auditLogsQuery.isLoading && recentActivities.length === 0 && <EmptyState title="Sem atividades" description="Eventos de auditoria aparecerão aqui." />}
             {recentActivities.map((activity) => (
               <article className="flex gap-3 rounded-card border border-line p-3" key={activity.id}>
                 <div className="grid size-10 shrink-0 place-items-center rounded-full bg-brand-50 text-brand-500">
