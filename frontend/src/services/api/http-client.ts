@@ -32,6 +32,18 @@ type RetriableRequestConfig = InternalAxiosRequestConfig & {
 
 let refreshSessionPromise: Promise<LoginResponse> | null = null
 
+function setAuthorizationHeader(
+  config: InternalAxiosRequestConfig,
+  value: string,
+) {
+  if (typeof config.headers.set === 'function') {
+    config.headers.set('Authorization', value)
+    return
+  }
+
+  ;(config.headers as Record<string, string>).Authorization = value
+}
+
 function isAuthRoute(url?: string) {
   return Boolean(
     url?.includes('/auth/login') ||
@@ -79,7 +91,7 @@ httpClient.interceptors.request.use((config) => {
   const token = getAccessToken()
 
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+    setAuthorizationHeader(config, `Bearer ${token}`)
   }
 
   return config
@@ -100,7 +112,10 @@ httpClient.interceptors.response.use(
         const refreshedSession = await refreshSession()
         const tokenType = refreshedSession.tipoToken || 'Bearer'
 
-        originalRequest.headers.Authorization = `${tokenType} ${refreshedSession.tokenAcesso}`
+        setAuthorizationHeader(
+          originalRequest,
+          `${tokenType} ${refreshedSession.tokenAcesso}`,
+        )
 
         return httpClient(originalRequest)
       } catch (refreshError) {
