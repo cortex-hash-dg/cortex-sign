@@ -13,9 +13,6 @@ const apiBaseUrl = import.meta.env.VITE_API_URL ?? '/api'
 export const httpClient = axios.create({
   baseURL: apiBaseUrl,
   timeout: 30000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 })
 
 const authHttpClient = axios.create({
@@ -42,6 +39,16 @@ function setAuthorizationHeader(
   }
 
   ;(config.headers as Record<string, string>).Authorization = value
+}
+
+function removeContentTypeHeader(config: InternalAxiosRequestConfig) {
+  if (typeof config.headers.delete === 'function') {
+    config.headers.delete('Content-Type')
+    return
+  }
+
+  delete (config.headers as Record<string, string>)['Content-Type']
+  delete (config.headers as Record<string, string>)['content-type']
 }
 
 function isAuthRoute(url?: string) {
@@ -89,6 +96,10 @@ async function refreshSession() {
 
 httpClient.interceptors.request.use((config) => {
   const token = getAccessToken()
+
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    removeContentTypeHeader(config)
+  }
 
   if (token) {
     setAuthorizationHeader(config, `Bearer ${token}`)
