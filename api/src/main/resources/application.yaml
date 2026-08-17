@@ -12,6 +12,8 @@ spring:
     username: ${DB_USER:${PGUSER:cortex_sign}}
     password: ${DB_PASSWORD:${PGPASSWORD:}}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      connection-init-sql: SET client_encoding TO 'UTF8'
 
   jpa:
     hibernate:
