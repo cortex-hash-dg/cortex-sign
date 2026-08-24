@@ -85,7 +85,7 @@ app:
 
   certificado:
     verificacao:
-      base-url: ${CERTIFICATE_VERIFICATION_BASE_URL:http://localhost:8080/api/certificados/verificar}
+      base-url: ${CERTIFICATE_VERIFICATION_BASE_URL:${APP_FRONTEND_URL:http://localhost:5173}/verificar/certificado}
 
   whatsapp:
     webhook:

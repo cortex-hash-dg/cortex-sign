@@ -35,7 +35,7 @@ export function StatusBadge({ label, tone = 'slate' }: StatusBadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium',
+        'inline-flex w-fit max-w-full shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap',
         toneClasses[tone],
       )}
     >

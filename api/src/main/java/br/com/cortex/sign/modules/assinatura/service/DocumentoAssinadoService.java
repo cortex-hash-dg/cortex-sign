@@ -47,6 +47,7 @@ import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.apache.pdfbox.pdmodel.graphics.image.LosslessFactory;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
+import org.apache.pdfbox.util.Matrix;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
@@ -195,12 +196,13 @@ public class DocumentoAssinadoService {
     ) throws Exception {
         PDRectangle mediaBox = page.getMediaBox();
         float width = mediaBox.getWidth();
-        float margin = Math.max(28, width * 0.045f);
-        float y = 15;
-        String textoRodape = certificadoId
-                + ". Documento assinado eletronicamente, conforme MP 2.200-2/2001 e Lei 14.063/2020."
-                + " Hash " + hashCurto(assinatura.getDocumentoHashSha256())
-                + ". Pag. " + paginaAtual + "/" + totalPaginas;
+        float height = mediaBox.getHeight();
+        float x = width - 14;
+        float y = 42;
+        String textoLateral = "Xsign " + certificadoId
+                + " | Documento assinado eletronicamente"
+                + " | Hash " + hashCurto(assinatura.getDocumentoHashSha256())
+                + " | Pag. " + paginaAtual + "/" + totalPaginas;
 
         try (PDPageContentStream content = new PDPageContentStream(
                 pdf,
@@ -209,21 +211,21 @@ public class DocumentoAssinadoService {
                 true,
                 true
         )) {
-            content.setStrokingColor(new Color(218, 218, 218));
+            content.setStrokingColor(new Color(224, 224, 224));
             content.setLineWidth(0.35f);
-            content.moveTo(0, y + 13);
-            content.lineTo(width, y + 13);
+            content.moveTo(width - 19, y - 8);
+            content.lineTo(width - 19, height - 42);
             content.stroke();
 
-            desenharTexto(content, "Xsign", FONT_BOLD, 6.8f, new Color(120, 120, 120), margin, y);
-            desenharTexto(
+            desenharTextoRotacionado(
                     content,
-                    limitarPorLargura(textoRodape, FONT_REGULAR, 6.1f, width - margin - 38),
+                    limitarPorLargura(textoLateral, FONT_REGULAR, 6.1f, height - 84),
                     FONT_REGULAR,
                     6.1f,
                     new Color(120, 120, 120),
-                    margin + 32,
-                    y
+                    x,
+                    y,
+                    Math.PI / 2
             );
         }
     }
@@ -348,8 +350,15 @@ public class DocumentoAssinadoService {
         content.stroke();
 
         float nomeY = y + height - 34;
-        desenharTexto(content, limitarPorLargura(valor(signatario.getNome()).toUpperCase(), FONT_BOLD, 9.6f, assinaturaX - x - 118), FONT_BOLD, 9.6f, new Color(48, 48, 48), x + 10, nomeY);
-        desenharPill(content, x + 122, nomeY - 3, 30, 10, "Assinado", SUCESSO);
+        float pillWidth = 30;
+        float pillHeight = 10;
+        float pillGap = 8;
+        float nomeX = x + 10;
+        float pillX = assinaturaX - 18 - pillWidth;
+        float nomeMaxWidth = Math.max(50, pillX - nomeX - pillGap);
+
+        desenharTexto(content, limitarPorLargura(valor(signatario.getNome()).toUpperCase(), FONT_BOLD, 9.6f, nomeMaxWidth), FONT_BOLD, 9.6f, new Color(48, 48, 48), nomeX, nomeY);
+        desenharPill(content, pillX, nomeY - 3, pillWidth, pillHeight, "Assinado", SUCESSO);
         desenharTexto(content, "Data e hora da assinatura: " + formatarData(assinatura.getAssinadoEm()), FONT_REGULAR, 6.8f, new Color(64, 64, 64), x + 10, y + height - 50);
         desenharTexto(content, "Token: " + valorOuPadrao(assinatura.getProtocolo(), hashCurto(assinatura.getSolicitacaoAssinatura().getCodigoHash())), FONT_REGULAR, 6.8f, new Color(64, 64, 64), x + 10, y + height - 62);
 
@@ -684,6 +693,15 @@ public class DocumentoAssinadoService {
         content.setNonStrokingColor(cor);
         content.setFont(fonte, tamanho);
         content.newLineAtOffset(x, y);
+        content.showText(textoPdf(texto));
+        content.endText();
+    }
+
+    private void desenharTextoRotacionado(PDPageContentStream content, String texto, PDType1Font fonte, float tamanho, Color cor, float x, float y, double radians) throws Exception {
+        content.beginText();
+        content.setNonStrokingColor(cor);
+        content.setFont(fonte, tamanho);
+        content.setTextMatrix(Matrix.getRotateInstance(radians, x, y));
         content.showText(textoPdf(texto));
         content.endText();
     }
